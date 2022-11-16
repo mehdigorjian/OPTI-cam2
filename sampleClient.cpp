@@ -869,9 +869,9 @@ void anim() {
     glutPostRedisplay();
 }
 
-void init() {
-    glClearColor(1.0, 1.0, 1.0, 1.0);
-}
+// void init() {
+//     glClearColor(1.0, 1.0, 1.0, 1.0);
+// }
 
 void draw_grid() {
     glPushMatrix();
@@ -922,7 +922,8 @@ void init_scene() {
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, (GLdouble)WindowWidth / (GLdouble)WindowHeight, 1.0, 750.0);
+    // gluPerspective(45.0, (GLdouble)WindowWidth / (GLdouble)WindowHeight, 1.0, 750.0);
+    glFrustum(-WindowWidth, WindowWidth, -WindowHeight, WindowHeight, -WindowWidth, WindowWidth);
 
     glMatrixMode(GL_MODELVIEW);
 
@@ -955,7 +956,14 @@ void display() {
     glEnd();
     glPopAttrib();
 
+    // showing coordinates as a fixed entity in the 2D space and
+    // not rotating with the mouse
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    gluOrtho2D(0.0, WindowWidth, 0.0, WindowHeight);
+    glLoadIdentity();
     showCoordinates();
+    glPopMatrix();
 
     // // drawing line between the pts
     // glColor3f(0.0, 0.9, 0.0);
@@ -975,7 +983,7 @@ void display() {
     // glEnd();
 
     // base pt
-    glColor3f(0.6, 0.9, 0.1);
+    glColor3f(1.0, 0.5, 1.0);
     glPushMatrix();
     glLoadIdentity();
     glTranslatef(-px * 1000, pz * 1000, py * 1000);
