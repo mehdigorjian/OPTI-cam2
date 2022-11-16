@@ -922,11 +922,30 @@ void init_scene() {
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    // gluPerspective(45.0, (GLdouble)WindowWidth / (GLdouble)WindowHeight, 1.0, 750.0);
-    glFrustum(-WindowWidth, WindowWidth, -WindowHeight, WindowHeight, -WindowWidth, WindowWidth);
-
+    gluPerspective(45.0, (GLdouble)WindowWidth / (GLdouble)WindowHeight, 1.0, 750.0);
     glMatrixMode(GL_MODELVIEW);
 
+    // adding light
+    // GLfloat diffuse0[] = {0.8, 0.8, 0.8, 1.0};
+    // GLfloat ambient0[] = {0.2, 0.2, 0.2, 1.0};
+    // GLfloat specular0[] = {1.0, 1.0, 1.0, 1.0};
+    // GLfloat position0[] = {100.0, 100.0, 100.0, 1.0};
+
+    // glEnable(GL_LIGHTING);
+    // glEnable(GL_LIGHT0);
+
+    // glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse0);
+    // glLightfv(GL_LIGHT0, GL_AMBIENT, ambient0);
+    // glLightfv(GL_LIGHT0, GL_SPECULAR, specular0);
+    // glLightfv(GL_LIGHT0, GL_POSITION, position0);
+
+    // glEnable(GL_COLOR_MATERIAL);
+    // glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    // glEnable(GL_NORMALIZE);
+    // glEnable(GL_SMOOTH);
+
+    // update camera location
     update_camera_location();
 }
 
@@ -986,7 +1005,7 @@ void display() {
     glColor3f(1.0, 0.5, 1.0);
     glPushMatrix();
     glLoadIdentity();
-    glTranslatef(-px * 1000, pz * 1000, py * 1000);
+    glTranslatef(-px * 1000, py * 1000, pz * 1000);
     glutSolidSphere(10, 32, 32);
     glPopMatrix();
 
