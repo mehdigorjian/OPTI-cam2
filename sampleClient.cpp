@@ -64,8 +64,8 @@ char getch();
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int WindowWidth = 300;
-int WindowHeight = 300;
+int WindowWidth = 500;
+int WindowHeight = 500;
 
 // static void Timer(int);
 void anim();
@@ -83,8 +83,9 @@ float px, py, pz, pxv, pyv, pzv;
 int coor_accuracy = 6;
 int move = 0;
 
-const int gridSize = 10;
-const float gridScale = 10.0;
+const int gridSize = 40;
+const float gridScale = 5.0f;
+const float cameraPosCoef = 1000.0f;
 
 // Constants -------------------------------------------------------------------
 
@@ -874,6 +875,7 @@ void anim() {
 // }
 
 void draw_grid() {
+    glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glPushAttrib(GL_LIGHTING_BIT);
     {
@@ -975,47 +977,36 @@ void display() {
     glEnd();
     glPopAttrib();
 
-    // showing coordinates as a fixed entity in the 2D space and
-    // not rotating with the mouse
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    gluOrtho2D(0.0, WindowWidth, 0.0, WindowHeight);
-    glLoadIdentity();
     showCoordinates();
-    glPopMatrix();
 
-    // // drawing line between the pts
-    // glColor3f(0.0, 0.9, 0.0);
-    // glLineWidth(.6);
-    // glBegin(GL_LINES);
-    // glVertex3f(-pxv * 1000, pzv * 1000, pyv * 1000);
-    // glVertex3f(-px * 1000, pz * 1000, py * 1000);
-    // glEnd();
-
-    // // draw axes
-    // glColor3f(0.6, 0.6, 0.6);
-    // glBegin(GL_LINES);
-    // glVertex3f(0, WindowHeight, 0);
-    // glVertex3f(0, -WindowHeight, 0);
-    // glVertex3f(WindowWidth, 0, 0);
-    // glVertex3f(-WindowWidth, 0, 0);
-    // glEnd();
-
-    // base pt
-    glColor3f(1.0, 0.5, 1.0);
-    glPushMatrix();
-    glLoadIdentity();
-    glTranslatef(-px * 1000, py * 1000, pz * 1000);
-    glutSolidSphere(10, 32, 32);
-    glPopMatrix();
-
-    // // arrow pt
-    // glColor3f(0.9, 0.0, 0.0);
+    // drawing line between the pts
     // glPushMatrix();
     // glLoadIdentity();
-    // glTranslatef(-pxv * 1000, pzv * 1000, pyv * 1000);
-    // glutSolidSphere(5, 32, 32);
+    // glColor3f(0.5, 0.25, 0.05);
+    // glLineWidth(4);
+    // glBegin(GL_LINES);
+    // glVertex3f(-px * 1000, py * 1000, pz * 1000);
+    // glVertex3f(-pxv * 100, pyv * 100, pzv * 100);
+    // glEnd();
     // glPopMatrix();
+
+    // // another test cube with yellow color
+    // glColor3f(1.0, 5, 0);
+    // glPushMatrix();
+    // glTranslatef(-px * 1000, py * 1000, -pz * 1000);
+    // glutSolidCube(20);
+    // glPopMatrix();
+
+    // drew sphere
+    glColor3f(1.0, 0.5, 1.0);
+    glLineWidth(.5);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    // glLoadIdentity();
+    glTranslatef(-px * cameraPosCoef, py * cameraPosCoef, -pz * cameraPosCoef);
+    // glutSolidSphere(20, 32, 32);
+    glutSolidCube(20);
+    glPopMatrix();
 
     draw_grid();
 
@@ -1043,6 +1034,13 @@ void drawText(char* s, float x, float y) {
 }
 
 void showCoordinates() {
+    // showing coordinates as a fixed entity in the 2D space and
+    // not rotating with the mouse
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    gluOrtho2D(0.0, WindowWidth, 0.0, WindowHeight);
+    glLoadIdentity();
+
     std::string tempX = "X = " + std::to_string(px * 1000);
     // convert string to const char*
     const char* c1 = tempX.c_str();
@@ -1072,6 +1070,7 @@ void showCoordinates() {
     // drawText(cX, 0., 0.4);
     // drawText(cY, 0., 0.2);
     // drawText(cZ, 0., 0.0);
+    glPopMatrix();
 }
 
 // Mouse callback --------------------------------------------------------------
