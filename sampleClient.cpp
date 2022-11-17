@@ -979,14 +979,14 @@ void display() {
 
     showCoordinates();
 
-    // drawing line between the pts
+    // // drawing line between the pts
     // glPushMatrix();
     // glLoadIdentity();
     // glColor3f(0.5, 0.25, 0.05);
     // glLineWidth(4);
     // glBegin(GL_LINES);
-    // glVertex3f(-px * 1000, py * 1000, pz * 1000);
-    // glVertex3f(-pxv * 100, pyv * 100, pzv * 100);
+    // glVertex3f(-px * 1000, py * 1000, -pz * 1000);
+    // glVertex3f(-pxv * 1000, pyv * 1000, -pzv * 1000);
     // glEnd();
     // glPopMatrix();
 
