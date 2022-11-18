@@ -83,8 +83,8 @@ float px, py, pz, pxv, pyv, pzv;
 int coor_accuracy = 6;
 int move = 0;
 
-const int gridSize = 20;
-const float gridScale = 20.0f;
+const int numberOfGrids = 20;
+const float gridScale = 10.0f;  // 1.0 = 1 millimiter, 10.0 = 1 centimeters
 const float cameraPosCoef = 1000.0f;
 
 // Constants -------------------------------------------------------------------
@@ -881,16 +881,16 @@ void draw_grid() {
     {
         glDisable(GL_LIGHTING);
         // glColor3f(0.4, 0.4, 0.4);
-        glScalef(gridScale, gridScale, gridScale);
+        glScalef(gridScale * 2, gridScale * 2, gridScale * 2);
         for (int k = 0; k < 2; k++) {
-            for (int i = -gridSize; i < gridSize + 1; i++) {
+            for (int i = -numberOfGrids; i < numberOfGrids + 1; i++) {
                 if (!(i % 10))
                     glColor3f(1.0, 1.0, 1.0);
                 else
                     glColor3f(0.4, 0.4, 0.4);
                 glBegin(GL_LINE_STRIP);
                 {
-                    for (int j = -gridSize; j < gridSize + 1; j++)
+                    for (int j = -numberOfGrids; j < numberOfGrids + 1; j++)
                         glVertex3f(k == 0 ? i : j, 0, k == 0 ? j : i);
                 }
                 glEnd();
