@@ -137,6 +137,7 @@ char g_discoveredMulticastGroupAddr[kNatNetIpv4AddrStrLenMax] = NATNET_DEFAULT_M
 int g_analogSamplesPerMocapFrame = 0;
 sServerDescription g_serverDescription;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
     // glutInit(&argc, argv);
     std::thread t1(glut_main, argc, argv);
