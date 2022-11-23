@@ -37,8 +37,12 @@ Usage [optional]:
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <eigen3/Eigen/Geometry>
+#include <glm/geometric.hpp>
+#include <glm/vec3.hpp>
 #include <iostream>
 #include <string>
+#include <vector>
 ////////////////////////////////////////////////////////////////////////
 #include <inttypes.h>
 // #include <stdio.h>
@@ -66,6 +70,7 @@ char getch();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int WindowWidth = 500;
 int WindowHeight = 500;
+#define M_PIl 3.141592653589793238462643383279502884L
 
 // static void Timer(int);
 void anim();
@@ -87,6 +92,12 @@ const int numberOfGrids = 20;
 const float gridScale = 10.0f;  // 1.0 = 1 millimiter, 10.0 = 1 centimeters
 const float cameraPosCoef = 1000.0f;
 
+Eigen::Vector3f euler;
+
+float rotation_angle;
+glm::vec3 rotation_axis;
+
+float rot_x, rot_y, rot_z;
 // Constants -------------------------------------------------------------------
 
 #define WHEEL_UP 3
@@ -634,7 +645,6 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
                data->RigidBodies[i].qy,
                data->RigidBodies[i].qz,
                data->RigidBodies[i].qw);
-
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         px = data->RigidBodies[i].x;
         py = data->RigidBodies[i].y;
@@ -643,6 +653,18 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
         pxv = data->RigidBodies[i].qx;
         pyv = data->RigidBodies[i].qy;
         pzv = data->RigidBodies[i].qz;
+
+        Eigen::Quaternionf qq;
+        qq.x() = data->RigidBodies[i].qx;
+        qq.y() = data->RigidBodies[i].qy;
+        qq.z() = data->RigidBodies[i].qz;
+        qq.w() = data->RigidBodies[i].qw;
+
+        euler = qq.toRotationMatrix().eulerAngles(0, 1, 2);
+        euler = euler * 180 / M_PI;
+        std::cout << "Euler from quaternion in roll, pitch, yaw" << std::endl
+                  << euler << std::endl;
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
 
@@ -658,10 +680,6 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // define array here
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     // labeled markers - this includes all markers (Active, Passive, and 'unlabeled' (markers with no asset but a PointCloud ID)
     bool bOccluded;      // marker was not visible (occluded) in this frame
     bool bPCSolved;      // reported position provided by point cloud solve
@@ -669,6 +687,20 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
     bool bHasModel;      // marker has an associated asset in the data stream
     bool bUnlabeled;     // marker is 'unlabeled', but has a point cloud ID that matches Motive PointCloud ID (In Motive 3D View)
     bool bActiveMarker;  // marker is an actively labeled LED marker
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // defining arrays to hold three marker location to define a plane and furthermore calculating the normal vector of the plane
+    static std::vector<glm::vec3> previous_vects;
+    static std::vector<glm::vec3> current_vects;
+
+    previous_vects.push_back(glm::vec3(0.0, 0.0, 0.0));
+    previous_vects.push_back(glm::vec3(0.0, 0.0, 1.0));
+    previous_vects.push_back(glm::vec3(1.0, 0.0, 0.0));
+
+    current_vects.push_back(glm::vec3(0.0, 0.0, 0.0));
+    current_vects.push_back(glm::vec3(1.0, 0.0, 0.0));
+    current_vects.push_back(glm::vec3(0.0, 0.0, 1.0));
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     printf("Markers [Count=%d]\n", data->nLabeledMarkers);
     for (i = 0; i < data->nLabeledMarkers; i++) {
@@ -682,9 +714,11 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
         sMarker marker = data->LabeledMarkers[i];
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // px = marker.x;
-        // py = marker.y;
-        // pz = marker.z;
+        if (i < 3) {
+            current_vects[i].x = marker.x;
+            current_vects[i].y = marker.y;
+            current_vects[i].z = marker.z;
+        }
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // Marker ID Scheme:
@@ -710,6 +744,57 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
         printf("%s Marker [ModelID=%d, MarkerID=%d] [size=%3.2f] [pos=%3.2f,%3.2f,%3.2f]\n",
                szMarkerType, modelID, markerID, marker.size, marker.x, marker.y, marker.z);
     }
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // calculating normal vector of the plane based on the three markers
+    // (1) previous_vect normal
+    glm::vec3 prev_v1 = previous_vects[1] - previous_vects[0];
+    glm::vec3 prev_v2 = previous_vects[2] - previous_vects[0];
+    glm::vec3 prev_normal = glm::cross(prev_v1, prev_v2);
+    prev_normal = glm::normalize(prev_normal);
+
+    // (2) current_vect normal
+    glm::vec3 curr_v1 = current_vects[1] - current_vects[0];
+    glm::vec3 curr_v2 = current_vects[2] - current_vects[0];
+    glm::vec3 curr_normal = glm::cross(curr_v1, curr_v2);
+    curr_normal = glm::normalize(curr_normal);
+
+    // 33333333333333333333333
+    // glm::vec3 vx(1, 0, 0);
+    // glm::vec3 vy(0, 1, 0);
+    // glm::vec3 vz(0, 0, 1);
+
+    // rot_x = glm::dot(curr_normal, vx) / glm::abs(glm::length(vx) * glm::length(curr_normal));
+    // rot_x = std::acos(rot_x) * 180 / M_PI;
+
+    // rot_y = glm::dot(curr_normal, vy) / glm::abs(glm::length(vy) * glm::length(curr_normal));
+    // rot_y = std::acos(rot_y) * 180 / M_PI;
+
+    // rot_z = glm::dot(curr_normal, vz) / glm::abs(glm::length(vz) * glm::length(curr_normal));
+    // rot_z = std::acos(rot_z) * 180 / M_PI;
+
+    // printf("rot_x: %f, rot_y: %f, rot_z: %f\n", rot_x, rot_y, rot_z);
+    // 333333333333333333333333
+
+    //  (3) calculating the rotation axis = glm::cross(prev_normal, curr_normal)
+    glm::vec3 rot_ax = glm::cross(prev_normal, curr_normal);
+    rotation_axis = glm::normalize(rot_ax);
+
+    // (4) calculating the rotation angle dot product
+    float rot_ang_radian = glm::dot(prev_normal, curr_normal) / glm::abs(glm::length(prev_normal) * glm::length(curr_normal));
+    rotation_angle = std::acos(rot_ang_radian) * 180 / M_PI;
+
+    // // ******
+    // // ******
+    // // ******
+    // // ******
+    // // ******
+
+    for (int i = 0; i < previous_vects.size(); i++) {
+        current_vects[i].x = previous_vects[i].x;
+        current_vects[i].y = previous_vects[i].y;
+        current_vects[i].z = previous_vects[i].z;
+    }
+    printf("x: %f, y: %f, z: %f rot-ang: %f\n", rotation_axis.x, rotation_axis.y, rotation_axis.z, rotation_angle);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // force plates
@@ -1006,10 +1091,16 @@ void display() {
     glLineWidth(.5);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
-    // glLoadIdentity();
     glTranslatef(-px * cameraPosCoef, py * cameraPosCoef, -pz * cameraPosCoef);
-    // glutSolidSphere(20, 32, 32);
-    glutSolidCube(20);
+    // check for the combination of the rotation and translation
+    // ***
+    // ***
+    // ***
+    glRotatef(180 - euler[0], 1, 0, 0);
+    glRotatef(180 - euler[1], 0, 1, 0);
+    glRotatef(180 - euler[2], 0, 0, 1);
+
+    glutSolidCube(100);
     glPopMatrix();
 
     draw_grid();
