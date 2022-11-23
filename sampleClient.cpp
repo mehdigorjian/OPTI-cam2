@@ -84,7 +84,7 @@ void resize(int, int);
 void mouse(int, int, int, int);
 void motion(int, int);
 
-float px, py, pz, pxv, pyv, pzv;
+float px, py, pz;
 int coor_accuracy = 6;
 int move = 0;
 
@@ -94,10 +94,6 @@ const float cameraPosCoef = 1000.0f;
 
 Eigen::Vector3f euler;
 
-float rotation_angle;
-glm::vec3 rotation_axis;
-
-float rot_x, rot_y, rot_z;
 // Constants -------------------------------------------------------------------
 
 #define WHEEL_UP 3
@@ -645,15 +641,15 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
                data->RigidBodies[i].qy,
                data->RigidBodies[i].qz,
                data->RigidBodies[i].qw);
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // the rigid boday centroid location
         px = data->RigidBodies[i].x;
         py = data->RigidBodies[i].y;
         pz = data->RigidBodies[i].z;
 
-        pxv = data->RigidBodies[i].qx;
-        pyv = data->RigidBodies[i].qy;
-        pzv = data->RigidBodies[i].qz;
-
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // converting the Quaternion rotation to the Euler rotation
         Eigen::Quaternionf qq;
         qq.x() = data->RigidBodies[i].qx;
         qq.y() = data->RigidBodies[i].qy;
@@ -688,20 +684,6 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
     bool bUnlabeled;     // marker is 'unlabeled', but has a point cloud ID that matches Motive PointCloud ID (In Motive 3D View)
     bool bActiveMarker;  // marker is an actively labeled LED marker
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // defining arrays to hold three marker location to define a plane and furthermore calculating the normal vector of the plane
-    static std::vector<glm::vec3> previous_vects;
-    static std::vector<glm::vec3> current_vects;
-
-    previous_vects.push_back(glm::vec3(0.0, 0.0, 0.0));
-    previous_vects.push_back(glm::vec3(0.0, 0.0, 1.0));
-    previous_vects.push_back(glm::vec3(1.0, 0.0, 0.0));
-
-    current_vects.push_back(glm::vec3(0.0, 0.0, 0.0));
-    current_vects.push_back(glm::vec3(1.0, 0.0, 0.0));
-    current_vects.push_back(glm::vec3(0.0, 0.0, 1.0));
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     printf("Markers [Count=%d]\n", data->nLabeledMarkers);
     for (i = 0; i < data->nLabeledMarkers; i++) {
         bOccluded = ((data->LabeledMarkers[i].params & 0x01) != 0);
@@ -712,14 +694,6 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
         bActiveMarker = ((data->LabeledMarkers[i].params & 0x20) != 0);
 
         sMarker marker = data->LabeledMarkers[i];
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        if (i < 3) {
-            current_vects[i].x = marker.x;
-            current_vects[i].y = marker.y;
-            current_vects[i].z = marker.z;
-        }
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // Marker ID Scheme:
         // Active Markers:
@@ -744,58 +718,6 @@ void NATNET_CALLCONV DataHandler(sFrameOfMocapData* data, void* pUserData) {
         printf("%s Marker [ModelID=%d, MarkerID=%d] [size=%3.2f] [pos=%3.2f,%3.2f,%3.2f]\n",
                szMarkerType, modelID, markerID, marker.size, marker.x, marker.y, marker.z);
     }
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // calculating normal vector of the plane based on the three markers
-    // (1) previous_vect normal
-    glm::vec3 prev_v1 = previous_vects[1] - previous_vects[0];
-    glm::vec3 prev_v2 = previous_vects[2] - previous_vects[0];
-    glm::vec3 prev_normal = glm::cross(prev_v1, prev_v2);
-    prev_normal = glm::normalize(prev_normal);
-
-    // (2) current_vect normal
-    glm::vec3 curr_v1 = current_vects[1] - current_vects[0];
-    glm::vec3 curr_v2 = current_vects[2] - current_vects[0];
-    glm::vec3 curr_normal = glm::cross(curr_v1, curr_v2);
-    curr_normal = glm::normalize(curr_normal);
-
-    // 33333333333333333333333
-    // glm::vec3 vx(1, 0, 0);
-    // glm::vec3 vy(0, 1, 0);
-    // glm::vec3 vz(0, 0, 1);
-
-    // rot_x = glm::dot(curr_normal, vx) / glm::abs(glm::length(vx) * glm::length(curr_normal));
-    // rot_x = std::acos(rot_x) * 180 / M_PI;
-
-    // rot_y = glm::dot(curr_normal, vy) / glm::abs(glm::length(vy) * glm::length(curr_normal));
-    // rot_y = std::acos(rot_y) * 180 / M_PI;
-
-    // rot_z = glm::dot(curr_normal, vz) / glm::abs(glm::length(vz) * glm::length(curr_normal));
-    // rot_z = std::acos(rot_z) * 180 / M_PI;
-
-    // printf("rot_x: %f, rot_y: %f, rot_z: %f\n", rot_x, rot_y, rot_z);
-    // 333333333333333333333333
-
-    //  (3) calculating the rotation axis = glm::cross(prev_normal, curr_normal)
-    glm::vec3 rot_ax = glm::cross(prev_normal, curr_normal);
-    rotation_axis = glm::normalize(rot_ax);
-
-    // (4) calculating the rotation angle dot product
-    float rot_ang_radian = glm::dot(prev_normal, curr_normal) / glm::abs(glm::length(prev_normal) * glm::length(curr_normal));
-    rotation_angle = std::acos(rot_ang_radian) * 180 / M_PI;
-
-    // // ******
-    // // ******
-    // // ******
-    // // ******
-    // // ******
-
-    for (int i = 0; i < previous_vects.size(); i++) {
-        current_vects[i].x = previous_vects[i].x;
-        current_vects[i].y = previous_vects[i].y;
-        current_vects[i].z = previous_vects[i].z;
-    }
-    printf("x: %f, y: %f, z: %f rot-ang: %f\n", rotation_axis.x, rotation_axis.y, rotation_axis.z, rotation_angle);
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // force plates
     printf("Force Plate [Count=%d]\n", data->nForcePlates);
@@ -1068,34 +990,16 @@ void display() {
 
     showCoordinates();
 
-    // // drawing line between the pts
-    // glPushMatrix();
-    // glLoadIdentity();
-    // glColor3f(0.5, 0.25, 0.05);
-    // glLineWidth(4);
-    // glBegin(GL_LINES);
-    // glVertex3f(-px * 1000, py * 1000, -pz * 1000);
-    // glVertex3f(-pxv * 1000, pyv * 1000, -pzv * 1000);
-    // glEnd();
-    // glPopMatrix();
-
-    // // another test cube with yellow color
-    // glColor3f(1.0, 5, 0);
-    // glPushMatrix();
-    // glTranslatef(-px * 1000, py * 1000, -pz * 1000);
-    // glutSolidCube(20);
-    // glPopMatrix();
-
     // drew sphere
     glColor3f(1.0, 0.5, 1.0);
     glLineWidth(.5);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
+
+    // translation matrix (the reason that we use minus x and z is the in OpenGL the Z axes is towards the screen and the X axes is to the right, despite the Optitrack)
     glTranslatef(-px * cameraPosCoef, py * cameraPosCoef, -pz * cameraPosCoef);
-    // check for the combination of the rotation and translation
-    // ***
-    // ***
-    // ***
+
+    // rotation matrices
     glRotatef(180 - euler[0], 1, 0, 0);
     glRotatef(180 - euler[1], 0, 1, 0);
     glRotatef(180 - euler[2], 0, 0, 1);
